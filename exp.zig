@@ -12,15 +12,24 @@ const any = std.vector.any;
 const select = std.vector.select;
 const exp_data = @import("exp_data.zig").exp_data;
 
-const V = @Vector(2, f64);
+fn exp64x2(x: @Vector(2, f64)) @Vector(2, f64) {
+    return exp(@Vector(2, f64), x);
+}
 
-pub fn exp64(comptime T: type, x: T) T {
-    if (T != V) {
+pub fn exp(comptime T: type, x: T) T {
+    comptime var vlen = @typeInfo(T).Vector.len;
+    return switch (@typeInfo(T).Vector.child) {
+    f64 => exp64(vlen, x),
+    else => unreachable,
+    };
+}
+
+fn exp64(comptime vlen: usize, x: @Vector(l, f64)) @Vector(l, f64) {
+    if (vlen != 2) {
         @compileError("Only 128-bit vectors supported ATM.");
     }
-    const vlen = V.len;
     const S = @Vector(vlen, u64);
-    var res: T = undefined;
+    var res: S = undefined;
 
     const exp_512 = @bitCast(u64, f64(512.0)) & 0x7ff0000000000000;
     var is_special_case = @bitCast(S, x) - @splat(vlen, exp_512) >=
