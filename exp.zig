@@ -12,6 +12,10 @@ const any = std.vector.any;
 const select = std.vector.select;
 const exp_data = @import("exp_data.zig").exp_data;
 
+export fn _ZGVbN2v_exp(x: @Vector(2, f64)) @Vector(2, f64) {
+    return exp64x2(x);
+}
+
 fn exp64x2(x: @Vector(2, f64)) @Vector(2, f64) {
     return exp(@Vector(2, f64), x);
 }
@@ -24,35 +28,35 @@ pub fn exp(comptime T: type, x: T) T {
     };
 }
 
-fn exp64(comptime vlen: usize, x: @Vector(l, f64)) @Vector(l, f64) {
+fn exp64(comptime vlen: usize, x: @Vector(vlen, f64)) @Vector(vlen, f64) {
     if (vlen != 2) {
         @compileError("Only 128-bit vectors supported ATM.");
     }
     const S = @Vector(vlen, u64);
-    var res: S = undefined;
+    var res: @typeOf(x) = undefined;
 
     const exp_512 = @bitCast(u64, f64(512.0)) & 0x7ff0000000000000;
     var is_special_case = @bitCast(S, x) - @splat(vlen, exp_512) >=
         @splat(vlen, @bitCast(u64, f64(512.0)) - exp_512);
     var is_special_case2: @Vector(vlen, bool) = undefined;
     {
-        var i: usize = 0;
-        while (i < vlen) : (i += 1) {
+        comptime var i: usize = 0;
+        inline while (i < vlen) : (i += 1) {
             is_special_case2[i] = false;
         }
     }
     const vbool = @typeOf(is_special_case);
     if (any(is_special_case)) {
-        var i: usize = 0;
+        var i: u16 = 0;
         while (i < vlen) : (i += 1) {
             if (is_special_case[i] == false) continue;
-            if (@bitCast(f64, x[i]) & 0x7ff0000000000000 < @bitCast(u64, f64(0x1p-54)) & 0xfff0000000000000) {
+            if (@bitCast(u64, x[i]) & 0x7ff0000000000000 < @bitCast(u64, f64(0x1p-54)) & 0xfff0000000000000) {
                 res[i] = 1.0;
             }
-            if (@bitCast(f64, x[i]) & 0x7ff0000000000000 >= @bitCast(u64, f64(1024.0)) & 0xfff0000000000000) {
-                if (@bitCast(u64, x[i]) == std.math.inf(f64)) {
+            if (@bitCast(u64, x[i]) & 0x7ff0000000000000 >= @bitCast(u64, f64(1024.0)) & 0xfff0000000000000) {
+                if (x[i] == std.math.inf(f64)) {
                     res[i] = 0.0;
-                } else if (@bitCast(u64, x[i]) & 0x7ff000000000 >= std.math.inf(f64) & 0xfff0000000000000) {
+                } else if (@bitCast(u64, x[i]) & 0x7ff000000000 >= @bitCast(u64, std.math.inf(f64)) & 0xfff0000000000000) {
                     res[i] = 1.0 + x[i];
                 } else if ((@bitCast(u64, x[i]) >> 63) > 0) {
                     res[i] = 0; // underflow

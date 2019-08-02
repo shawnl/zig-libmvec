@@ -18,21 +18,21 @@ pub const exp_data = struct {
     shift: f64 = 0x1.8p52,
     negln2hiN: f64 = -0x1.62e42fefa0000p-8,
     negln2loN: f64 = -0x1.cf79abc9e3b3ap-47,
-    poly = [4]f64{
+    poly: [4]f64 = [4]f64{
         0x1.ffffffffffdbdp-2,
         0x1.555555555543cp-3,
         0x1.55555cf172b91p-5,
         0x1.1111167a4d017p-7,
     },
     exp2_shift: f64 = 0x1.8p52 / N,
-    exp2_poly = [5]f64{
+    exp2_poly: [5]f64 = [5]f64{
         0x1.62e42fefa39efp-1,
         0x1.ebfbdff82c424p-3,
         0x1.c6b08d70cf4b5p-5,
         0x1.3b2abd24650ccp-7,
         0x1.5d7e09b4e3a84p-10,
     },
-    tab = [256]u64{
+    tab: [256]u64 = [256]u64{
 0x0, 0x3ff0000000000000,
 0x3c9b3b4f1a88bf6e, 0x3feff63da9fb3335,
 0xbc7160139cd8dc5d, 0x3fefec9a3e778061,
