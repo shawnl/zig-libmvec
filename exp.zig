@@ -10,7 +10,9 @@ const std = @import("std");
 const math = std.math;
 const any = std.vector.any;
 const select = std.vector.select;
-const exp_data = @import("exp_data.zig").exp_data;
+const exp_data = @import("exp_data.zig");
+const N = exp_data.N;
+const Tab = exp_data.tab;
 
 export fn _ZGVbN2v_exp(x: @Vector(2, f64)) @Vector(2, f64) {
     return exp64x2(x);
@@ -32,8 +34,9 @@ fn exp64(comptime vlen: usize, x: @Vector(vlen, f64)) @Vector(vlen, f64) {
     if (vlen != 2) {
         @compileError("Only 128-bit vectors supported ATM.");
     }
+    const V = @typeOf(x);
     const S = @Vector(vlen, u64);
-    var res: @typeOf(x) = undefined;
+    var res: V = undefined;
 
     const exp_512 = @bitCast(u64, f64(512.0)) & 0x7ff0000000000000;
     var is_special_case = @bitCast(S, x) - @splat(vlen, exp_512) >=
@@ -73,10 +76,11 @@ fn exp64(comptime vlen: usize, x: @Vector(vlen, f64)) @Vector(vlen, f64) {
     var kd = z + @splat(vlen, exp_data.shift);
     kd -= @splat(vlen, exp_data.shift);
     var r = x + kd * @splat(vlen, exp_data.negln2hiN) + kd * @splat(vlen, exp_data.negln2loN);
-    var idx = 2 * (@bitCast(u64, kd) % N);
-    var top = @bitCast(u64, kd) << (52 - exp_data.EXP_TABLE_BITS);
-    var tail = @gather(u64, V([_]*u64{&T[idx[0]], &T[idx[1]]}), vbool([_]bool{true, true}), undefined);
-    var sbits = @gather(u64, V([_]*u64{&T[idx[0] + 1], &T[idx[1] + 1]}), vbool([_]bool{true, true}), undefined) +
+    var idx = @splat(2, u64(2)) * (@bitCast(u64, kd) % @splat(vlen, u64(N)));
+    // TODO check optimizations of this @Vector(2, u6)
+    var top = @bitCast(u64, kd) << @splat(2, u6(52 - exp_data.EXP_TABLE_BITS));
+    var tail = @gather(u64, @Vector(vlen, *const u64)([_]*const u64{&Tab[idx[0]], &Tab[idx[1]]}), vbool([_]bool{true, true}), undefined);
+    var sbits = @gather(u64, @Vector(vlen, *const u64)([_]*const u64{&Tab[idx[0] + 1], &Tab[idx[1] + 1]}), vbool([_]bool{true, true}), undefined) +
         top;
     var r2 = r * r;
     var tmp = tail + r + r2 * (@splat(vlen, C2) + r * @splat(vlen, C3)) + r2 * r2 * (@splat(vlen, C4) + r * @splat(vlen, C5));
