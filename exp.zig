@@ -134,7 +134,7 @@ test "exp64" {
     r.s[1] = 0x01cd153642e72622;
 
     var i: usize = 0;
-    while (i < 1024 * 1024 * 1024) : (i += 2) {
+    while (i < 1024 * 64) : (i += 2) {
         var a: u64 = r.next();
         var b: u64 = r.next();
         var ares: f64 = c.exp(@bitCast(f64, a));
