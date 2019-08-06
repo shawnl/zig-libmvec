@@ -12,26 +12,31 @@ pub const EXP_POLY_ORDER = 5;
 pub const EXP2_POLY_ORDER = 5;
 pub const N = (1 << EXP_TABLE_BITS);
 
-pub const invln2N = 0x1.71547652b82fep0 * f64(N);
+pub const C2 = Poly[5 - EXP_POLY_ORDER];
+pub const C3 = Poly[6 - EXP_POLY_ORDER];
+pub const C4 = Poly[7 - EXP_POLY_ORDER];
+pub const C5 = Poly[8 - EXP_POLY_ORDER];
+
+pub const Invln2N = 0x1.71547652b82fep0 * f64(N);
 // not used when architecture has intrinsics for lround
-pub const shift: f64 = 0x1.8p52;
-pub const negln2hiN: f64 = -0x1.62e42fefa0000p-8;
-pub const negln2loN: f64 = -0x1.cf79abc9e3b3ap-47;
-pub const poly = [4]f64{
+pub const Shift: f64 = 0x1.8p52;
+pub const Negln2hiN: f64 = -0x1.62e42fefa0000p-8;
+pub const Negln2loN: f64 = -0x1.cf79abc9e3b3ap-47;
+pub const Poly = [4]f64{
     0x1.ffffffffffdbdp-2,
     0x1.555555555543cp-3,
     0x1.55555cf172b91p-5,
     0x1.1111167a4d017p-7,
 };
-pub const exp2_shift = 0x1.8p52 / f64(N);
-pub const exp2_poly = [5]f64{
+pub const Exp2_shift = 0x1.8p52 / f64(N);
+pub const Exp2_poly = [5]f64{
     0x1.62e42fefa39efp-1,
     0x1.ebfbdff82c424p-3,
     0x1.c6b08d70cf4b5p-5,
     0x1.3b2abd24650ccp-7,
     0x1.5d7e09b4e3a84p-10,
 };
-pub const tab = [256]u64{
+pub const Tab = [256]u64{
 0x0, 0x3ff0000000000000,
 0x3c9b3b4f1a88bf6e, 0x3feff63da9fb3335,
 0xbc7160139cd8dc5d, 0x3fefec9a3e778061,
