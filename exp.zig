@@ -54,11 +54,12 @@ fn exp64(comptime vlen: usize, x: @Vector(vlen, f64)) @Vector(vlen, f64) {
             if (is_special_case[i] == false) continue;
             if (@bitCast(u64, x[i]) & 0x7ff0000000000000 < @bitCast(u64, f64(0x1p-54)) & 0xfff0000000000000) {
                 res[i] = 1.0;
+                continue;
             }
             if (@bitCast(u64, x[i]) & 0x7ff0000000000000 >= @bitCast(u64, f64(1024.0)) & 0xfff0000000000000) {
-                if (x[i] == std.math.inf(f64)) {
+                if (x[i] == -std.math.inf(f64)) {
                     res[i] = 0.0;
-                } else if (@bitCast(u64, x[i]) & 0x7ff000000000 >= @bitCast(u64, std.math.inf(f64)) & 0xfff0000000000000) {
+                } else if (@bitCast(u64, x[i]) & 0x7ff0000000000000 >= @bitCast(u64, std.math.inf(f64)) & 0xfff0000000000000) {
                     res[i] = 1.0 + x[i];
                 } else if ((@bitCast(u64, x[i]) >> 63) > 0) {
                     res[i] = 0; // underflow
@@ -80,7 +81,7 @@ fn exp64(comptime vlen: usize, x: @Vector(vlen, f64)) @Vector(vlen, f64) {
     // TODO check optimizations of this @Vector(2, u6)
     var top = ki << @splat(2, u6(52 - EXP_TABLE_BITS));
     var tail = @bitCast(f64, @gather(u64, @Vector(vlen, *const u64)([_]*const u64{&Tab[idx[0]], &Tab[idx[1]]}), vbool([_]bool{true, true}), undefined));
-    var sbits = @gather(u64, @Vector(vlen, *const u64)([_]*const u64{&Tab[idx[0] + 1], &Tab[idx[1] + 1]}), vbool([_]bool{true, true}), undefined) +
+    var sbits = @gather(u64, @Vector(vlen, *const u64)([_]*const u64{&Tab[idx[0] + 1], &Tab[idx[1] + 1]}), vbool([_]bool{true, true}), undefined) +%
         top;
     var r2 = r * r;
     var tmp = tail + r + r2 * (@splat(vlen, C2) + r * @splat(vlen, C3)) + r2 * r2 * (@splat(vlen, C4) + r * @splat(vlen, C5));
@@ -89,7 +90,7 @@ fn exp64(comptime vlen: usize, x: @Vector(vlen, f64)) @Vector(vlen, f64) {
         var i: u32 = 0;
         while (i < vlen) : (i += 1) {
             if (is_special_case2[i] == false) continue;
-            res[i] = specialcase2(tmp[i], sbits[i], @bitCast(u64, kd[i]));
+            res[i] = specialcase2(tmp[i], sbits[i], ki[i]);
         }
     }
     var resUnspecial = @bitCast(f64, sbits) + @bitCast(f64, sbits) * tmp;
@@ -100,11 +101,11 @@ fn specialcase2(tmp: f64, _sbits: u64, ki: u64) f64 {
     var scale: f64 = undefined;
     var sbits = _sbits;
     if ((ki & 0x80000000) == 0) {
-        sbits -%= u64(1009) << 53;
+        sbits -%= u64(1009) << 52;
         scale = @bitCast(f64, sbits);
         return 0x1p1009 * (scale + scale * tmp);
     }
-    sbits += u64(1022) << 52;
+    sbits +%= u64(1022) << 52;
     scale = @bitCast(f64, sbits);
     var y = scale + scale * tmp;
     if (y < 1.0) {
@@ -133,7 +134,7 @@ test "exp64" {
     r.s[1] = 0x01cd153642e72622;
 
     var i: usize = 0;
-    while (i < 1024 * 1024) : (i += 2) {
+    while (i < 1024 * 1024 * 1024) : (i += 2) {
         var a: u64 = r.next();
         var b: u64 = r.next();
         var ares: f64 = c.exp(@bitCast(f64, a));
