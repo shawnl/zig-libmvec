@@ -77,12 +77,11 @@ fn exp64(comptime vlen: usize, x: @Vector(vlen, f64)) @Vector(vlen, f64) {
     var ki = @bitCast(u64, kd);
     kd -= @splat(vlen, Shift);
     var r = x + kd * @splat(vlen, Negln2hiN) + kd * @splat(vlen, Negln2loN);
-    var idx = @splat(2, u64(2)) * (ki % @splat(vlen, u64(N)));
+    var idx = @splat(vlen, u64(2)) * (ki % @splat(vlen, u64(N)));
     // TODO check optimizations of this @Vector(2, u6)
     var top = ki << @splat(2, u6(52 - EXP_TABLE_BITS));
-    var tail = @bitCast(f64, @gather(u64, @Vector(vlen, *const u64)([_]*const u64{&Tab[idx[0]], &Tab[idx[1]]}), vbool([_]bool{true, true}), undefined));
-    var sbits = @gather(u64, @Vector(vlen, *const u64)([_]*const u64{&Tab[idx[0] + 1], &Tab[idx[1] + 1]}), vbool([_]bool{true, true}), undefined) +%
-        top;
+    var tail = @bitCast(f64, Tab[idx]);
+    var sbits = Tab[idx + @splat(vlen, usize(1))] +% top;
     var r2 = r * r;
     var tmp = tail + r + r2 * (@splat(vlen, C2) + r * @splat(vlen, C3)) + r2 * r2 * (@splat(vlen, C4) + r * @splat(vlen, C5));
     is_special_case2 |= ((@bitCast(u64, x) & @splat(vlen, u64(0x7ff0000000000000))) == @splat(2, u64(0))) & ~is_special_case;
