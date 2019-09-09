@@ -29,9 +29,6 @@ pub fn exp(comptime T: type, x: T) T {
 }
 
 fn exp64(comptime vlen: usize, x: @Vector(vlen, f64)) @Vector(vlen, f64) {
-    if (vlen != 2) {
-        @compileError("Only 128-bit vectors supported ATM.");
-    }
     const V = @typeOf(x);
     const S = @Vector(vlen, u64);
     var res: V = undefined;
@@ -40,14 +37,7 @@ fn exp64(comptime vlen: usize, x: @Vector(vlen, f64)) @Vector(vlen, f64) {
     const exp_1pn54 = @bitCast(u64, f64(0x1p-54)) >> u6(52);
     var is_special_case = ((@bitCast(S, x) >> @splat(vlen, u6(52))) & @splat(vlen, u64(0x7ff))) -% @splat(vlen, exp_1pn54) >=
         @splat(vlen, exp_512 - exp_1pn54);
-    var is_special_case2: @Vector(vlen, bool) = undefined;
-    {
-        comptime var i: usize = 0;
-        inline while (i < vlen) : (i += 1) {
-            is_special_case2[i] = false;
-        }
-    }
-    const vbool = @typeOf(is_special_case);
+    var is_special_case2: @Vector(vlen, bool) = @splat(vlen, false);
     if (any(is_special_case)) {
         var i: u16 = 0;
         while (i < vlen) : (i += 1) {
@@ -74,17 +64,17 @@ fn exp64(comptime vlen: usize, x: @Vector(vlen, f64)) @Vector(vlen, f64) {
     }
     var z = x * @splat(vlen, Invln2N);
     var kd = z + @splat(vlen, Shift);
-    var ki = @bitCast(u64, kd);
+    var ki = @bitCast(usize, kd);
     kd -= @splat(vlen, Shift);
     var r = x + kd * @splat(vlen, Negln2hiN) + kd * @splat(vlen, Negln2loN);
-    var idx = @splat(vlen, u64(2)) * (ki % @splat(vlen, u64(N)));
+    var idx = @splat(vlen, usize(2)) * (ki % @splat(vlen, usize(N)));
     // TODO check optimizations of this @Vector(2, u6)
-    var top = ki << @splat(2, u6(52 - EXP_TABLE_BITS));
+    var top = ki << @splat(vlen, u6(52 - EXP_TABLE_BITS));
     var tail = @bitCast(f64, Tab[idx]);
-    var sbits = Tab[idx + @splat(vlen, usize(1))] +% top;
+    var sbits = Tab[idx + @splat(vlen, usize(1))] +% @Vector(vlen, u64)(top);
     var r2 = r * r;
     var tmp = tail + r + r2 * (@splat(vlen, C2) + r * @splat(vlen, C3)) + r2 * r2 * (@splat(vlen, C4) + r * @splat(vlen, C5));
-    is_special_case2 |= ((@bitCast(u64, x) & @splat(vlen, u64(0x7ff0000000000000))) == @splat(2, u64(0))) & ~is_special_case;
+    is_special_case2 |= ((@bitCast(u64, x) & @splat(vlen, u64(0x7ff0000000000000))) == @splat(vlen, u64(0))) & ~is_special_case;
     if (any(is_special_case2)) {
         var i: u32 = 0;
         while (i < vlen) : (i += 1) {
@@ -132,6 +122,7 @@ test "exp64" {
     r.s[0] = 0xaeecf86f7878dd75;
     r.s[1] = 0x01cd153642e72622;
 
+{
     var i: usize = 0;
     while (i < 1024 * 64) : (i += 2) {
         var a: u64 = r.next();
@@ -152,5 +143,114 @@ test "exp64" {
             std.os.abort();
         }
     }
+}
+{
+    var i: usize = 0;
+    while (i < 1024 * 64) : (i += 4) {
+        var a: u64 = r.next();
+        var b: u64 = r.next();
+        var cv: u64 = r.next();
+        var d: u64 = r.next();
+        var ares: f64 = c.exp(@bitCast(f64, a));
+        var bres: f64 = c.exp(@bitCast(f64, b));
+        var cres: f64 = c.exp(@bitCast(f64, cv));
+        var dres: f64 = c.exp(@bitCast(f64, d));
+        var res = exp64(4, @bitCast(f64, @Vector(4, u64)([_]u64{a, b, cv, d})));
+        if (math.isNan(ares)) ares = math.nan(f64);
+        if (math.isNan(bres)) bres = math.nan(f64);
+        if (math.isNan(cres)) cres = math.nan(f64);
+        if (math.isNan(dres)) dres = math.nan(f64);
+        if (math.isNan(res[0])) res[0] = math.nan(f64);
+        if (math.isNan(res[1])) res[1] = math.nan(f64);
+        if (math.isNan(res[2])) res[2] = math.nan(f64);
+        if (math.isNan(res[3])) res[3] = math.nan(f64);
+        if (@bitCast(u64, res[0]) != @bitCast(u64, ares)) {
+            std.debug.warn("{} exp({}) should be {}, got {}\n", i, @bitCast(f64, a), ares, res[0]);
+            std.os.abort();
+        }
+        if (@bitCast(u64, res[1]) != @bitCast(u64, bres)) {
+            std.debug.warn("{} exp({}) should be {}, got {}\n", i, @bitCast(f64, b), bres, res[1]);
+            std.os.abort();
+        }
+        if (@bitCast(u64, res[2]) != @bitCast(u64, cres)) {
+            std.debug.warn("{} exp({}) should be {}, got {}\n", i, @bitCast(f64, cv), cres, res[2]);
+            std.os.abort();
+        }
+        if (@bitCast(u64, res[3]) != @bitCast(u64, dres)) {
+            std.debug.warn("{} exp({}) should be {}, got {}\n", i, @bitCast(f64, d), dres, res[3]);
+            std.os.abort();
+        }
+    }
+}
+{
+    var i: usize = 0;
+    while (i < 1024 * 64) : (i += 8) {
+        var a: u64 = r.next();
+        var b: u64 = r.next();
+        var cv: u64 = r.next();
+        var d: u64 = r.next();
+        var e: u64 = r.next();
+        var f: u64 = r.next();
+        var g: u64 = r.next();
+        var h: u64 = r.next();
+        var ares: f64 = c.exp(@bitCast(f64, a));
+        var bres: f64 = c.exp(@bitCast(f64, b));
+        var cres: f64 = c.exp(@bitCast(f64, cv));
+        var dres: f64 = c.exp(@bitCast(f64, d));
+        var eres: f64 = c.exp(@bitCast(f64, e));
+        var fres: f64 = c.exp(@bitCast(f64, f));
+        var gres: f64 = c.exp(@bitCast(f64, g));
+        var hres: f64 = c.exp(@bitCast(f64, h));
+        var res = exp64(8, @bitCast(f64, @Vector(8, u64)([_]u64{a, b, cv, d, e, f, g, h})));
+        if (math.isNan(ares)) ares = math.nan(f64);
+        if (math.isNan(bres)) bres = math.nan(f64);
+        if (math.isNan(cres)) cres = math.nan(f64);
+        if (math.isNan(dres)) dres = math.nan(f64);
+        if (math.isNan(eres)) eres = math.nan(f64);
+        if (math.isNan(fres)) fres = math.nan(f64);
+        if (math.isNan(gres)) gres = math.nan(f64);
+        if (math.isNan(hres)) hres = math.nan(f64);
+        if (math.isNan(res[0])) res[0] = math.nan(f64);
+        if (math.isNan(res[1])) res[1] = math.nan(f64);
+        if (math.isNan(res[2])) res[2] = math.nan(f64);
+        if (math.isNan(res[3])) res[3] = math.nan(f64);
+        if (math.isNan(res[4])) res[4] = math.nan(f64);
+        if (math.isNan(res[5])) res[5] = math.nan(f64);
+        if (math.isNan(res[6])) res[6] = math.nan(f64);
+        if (math.isNan(res[7])) res[7] = math.nan(f64);
+        if (@bitCast(u64, res[0]) != @bitCast(u64, ares)) {
+            std.debug.warn("{} exp({}) should be {}, got {}\n", i, @bitCast(f64, a), ares, res[0]);
+            std.os.abort();
+        }
+        if (@bitCast(u64, res[1]) != @bitCast(u64, bres)) {
+            std.debug.warn("{} exp({}) should be {}, got {}\n", i, @bitCast(f64, b), bres, res[1]);
+            std.os.abort();
+        }
+        if (@bitCast(u64, res[2]) != @bitCast(u64, cres)) {
+            std.debug.warn("{} exp({}) should be {}, got {}\n", i, @bitCast(f64, cv), cres, res[2]);
+            std.os.abort();
+        }
+        if (@bitCast(u64, res[3]) != @bitCast(u64, dres)) {
+            std.debug.warn("{} exp({}) should be {}, got {}\n", i, @bitCast(f64, d), dres, res[3]);
+            std.os.abort();
+        }
+        if (@bitCast(u64, res[4]) != @bitCast(u64, eres)) {
+            std.debug.warn("{} exp({}) should be {}, got {}\n", i, @bitCast(f64, e), eres, res[4]);
+            std.os.abort();
+        }
+        if (@bitCast(u64, res[5]) != @bitCast(u64, fres)) {
+            std.debug.warn("{} exp({}) should be {}, got {}\n", i, @bitCast(f64, f), fres, res[5]);
+            std.os.abort();
+        }
+        if (@bitCast(u64, res[6]) != @bitCast(u64, gres)) {
+            std.debug.warn("{} exp({}) should be {}, got {}\n", i, @bitCast(f64, g), gres, res[6]);
+            std.os.abort();
+        }
+        if (@bitCast(u64, res[7]) != @bitCast(u64, hres)) {
+            std.debug.warn("{} exp({}) should be {}, got {}\n", i, @bitCast(f64, h), hres, res[7]);
+            std.os.abort();
+        }
+    }
+}
     std.debug.warn("success!\n");
 }
