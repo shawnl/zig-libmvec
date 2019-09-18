@@ -32,7 +32,7 @@ pub fn main() !void {
     var stdout_file = try std.io.getStdOut();
     var stdout_out_stream = stdout_file.outStream();
     const stdout = &stdout_out_stream.stream;
-    try stdout.print("checksum: {}. {} bytes/s\n", sum, throughput);
+    try stdout.print("checksum: {}. {} bytes/s\n", (sum << 64) +% (sum % (u128(1) << 64)), throughput);
     
     
 }
