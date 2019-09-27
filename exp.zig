@@ -5,7 +5,6 @@
 //
 // Based on https://github.com/ARM-software/optimized-routines/
 // by Szabolcs Nagy
-// MIT License
 const std = @import("std");
 const math = std.math;
 const any = std.vector.any;
@@ -13,11 +12,19 @@ const select = std.vector.select;
 use @import("exp_data.zig");
 
 export fn _ZGVbN2v_exp(x: @Vector(2, f64)) @Vector(2, f64) {
-    return exp64x2(x);
+    return exp(@Vector(2, f64), x);
 }
 
-fn exp64x2(x: @Vector(2, f64)) @Vector(2, f64) {
-    return exp(@Vector(2, f64), x);
+export fn _ZGVcN4v_exp(x: @Vector(4, f64)) @Vector(4, f64) {
+    return exp(@Vector(4, f64), x);
+}
+
+export fn _ZGVdN4v_exp(x: @Vector(4, f64)) @Vector(4, f64) {
+    return exp(@Vector(4, f64), x);
+}
+
+export fn _ZGVeN8v_exp(x: @Vector(8, f64)) @Vector(8, f64) {
+    return exp(@Vector(8, f64), x);
 }
 
 pub fn exp(comptime T: type, x: T) T {
