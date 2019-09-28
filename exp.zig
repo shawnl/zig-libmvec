@@ -19,9 +19,9 @@ export fn _ZGVcN4v_exp(x: @Vector(4, f64)) @Vector(4, f64) {
     return exp(@Vector(4, f64), x);
 }
 
-export fn _ZGVdN4v_exp(x: @Vector(4, f64)) @Vector(4, f64) {
-    return exp(@Vector(4, f64), x);
-}
+//export fn _ZGVdN4v_exp(x: @Vector(4, f64)) @Vector(4, f64) {
+//    return exp(@Vector(4, f64), x);
+//}
 
 export fn _ZGVeN8v_exp(x: @Vector(8, f64)) @Vector(8, f64) {
     return exp(@Vector(8, f64), x);

@@ -3,9 +3,8 @@ const math = std.math;
 const rand = std.rand;
 const heap = std.heap;
 const exp = @import("exp.zig").exp;
-const c = @cImport({
-    @cInclude("exp.h");
-});
+
+extern fn _ZGVcN4v_exp(x: @Vector(4, f64)) @Vector(4, f64);
 
 const time = std.time;
 const Timer = time.Timer;
@@ -14,11 +13,11 @@ pub fn main() !void {
     var r = rand.Xoroshiro128.init(0);
     r.s[0] = 0xaeecf86f7878dd75;
     r.s[1] = 0x01cd153642e72623;
-    const V = @Vector(2, f64);
+    const V = @Vector(4, f64);
     
     const allocator = heap.direct_allocator;
-    const buf = try allocator.alloc(u8, 1024 * 1024 * 1024);
-    const resbuf = try allocator.alloc(u8, 1024 * 1024 * 1024);
+    const buf = try allocator.alloc(u8, 128 * 1024 * 1024);
+    const resbuf = try allocator.alloc(u8, 128 * 1024 * 1024);
     const res = @bytesToSlice(V, resbuf);
     r.random.bytes(buf);
     // normalize
@@ -32,8 +31,8 @@ pub fn main() !void {
     const start = timer.lap();
 
     const s = @bytesToSlice(V, buf);
-    for (s) |pair, i| {
-        res[i] = c._ZGVdN4v_exp(pair);//exp(V, pair);
+    for (s) |pair, j| {
+        res[j] = _ZGVcN4v_exp(pair);//exp(V, pair);
     }
 
     const end = timer.read();
