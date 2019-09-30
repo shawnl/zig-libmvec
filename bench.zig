@@ -5,7 +5,7 @@ const heap = std.heap;
 const exp = @import("exp.zig").exp;
 const assert = std.debug.assert;
 
-const size = 1024 * 1024 * 1024;
+const size = 1024 * 1024 * 512;
 
 const V2 = @Vector(2, f64);
 const V4 = @Vector(4, f64);
