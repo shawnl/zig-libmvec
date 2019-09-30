@@ -15,17 +15,17 @@ export fn _ZGVbN2v_exp(x: @Vector(2, f64)) @Vector(2, f64) {
     return exp(@Vector(2, f64), x);
 }
 
-export fn _ZGVcN4v_exp(x: @Vector(4, f64)) @Vector(4, f64) {
-    return exp(@Vector(4, f64), x);
-}
+//export fn _ZGVcN4v_exp(x: @Vector(4, f64)) @Vector(4, f64) {
+//    return exp(@Vector(4, f64), x);
+//}
 
 //export fn _ZGVdN4v_exp(x: @Vector(4, f64)) @Vector(4, f64) {
 //    return exp(@Vector(4, f64), x);
 //}
 
-export fn _ZGVeN8v_exp(x: @Vector(8, f64)) @Vector(8, f64) {
-    return exp(@Vector(8, f64), x);
-}
+//export fn _ZGVeN8v_exp(x: @Vector(8, f64)) @Vector(8, f64) {
+//    return exp(@Vector(8, f64), x);
+//}
 
 pub fn exp(comptime T: type, x: T) T {
     comptime var vlen = @typeInfo(T).Vector.len;
@@ -71,14 +71,14 @@ fn exp64(comptime vlen: usize, x: @Vector(vlen, f64)) @Vector(vlen, f64) {
     }
     var z = x * @splat(vlen, Invln2N);
     var kd = z + @splat(vlen, Shift);
-    var ki = @bitCast(usize, kd);
+    var ki = @bitCast(u64, kd);
     kd -= @splat(vlen, Shift);
     var r = x + kd * @splat(vlen, Negln2hiN) + kd * @splat(vlen, Negln2loN);
-    var idx = @splat(vlen, usize(2)) * (ki % @splat(vlen, usize(N)));
+    var idx = @splat(vlen, u64(2)) * (ki % @splat(vlen, u64(N)));
     // TODO check optimizations of this @Vector(2, u6)
     var top = ki << @splat(vlen, u6(52 - EXP_TABLE_BITS));
-    var tail = @bitCast(f64, Tab[idx]);
-    var sbits = Tab[idx + @splat(vlen, usize(1))] +% @Vector(vlen, u64)(top);
+    var tail = @bitCast(f64, Tab[@truncate(usize, idx)]);
+    var sbits = Tab[@truncate(usize, idx) + @splat(vlen, usize(1))] +% @Vector(vlen, u64)(top);
     var r2 = r * r;
     var tmp = tail + r + r2 * (@splat(vlen, C2) + r * @splat(vlen, C3)) + r2 * r2 * (@splat(vlen, C4) + r * @splat(vlen, C5));
     is_special_case2 |= ((@bitCast(u64, x) & @splat(vlen, u64(0x7ff0000000000000))) == @splat(vlen, u64(0))) & ~is_special_case;
