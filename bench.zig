@@ -35,6 +35,7 @@ pub fn main() !void {
     var doubles = @bytesToSlice(f64, buf);
     var rands = @bytesToSlice(u64, buf);
     for (rands) |thisrand, i| {
+        // This avoids both special case paths, to test only the main path
         doubles[i] = @intToFloat(f64, thisrand) / @intToFloat(f64, 1 << 63);
     }
 
